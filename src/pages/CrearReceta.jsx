@@ -164,6 +164,8 @@ function CrearReceta() {
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (file) {
+      console.log('DEBUG: Archivo seleccionado:', file.name, 'Tamaño:', file.size, 'Tipo:', file.type)
+      
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         setErrors(prev => ({ ...prev, foto_principal: 'Por favor selecciona una imagen válida' }))
@@ -178,10 +180,14 @@ function CrearReceta() {
 
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImagePreview(e.target.result)
+        const base64Data = e.target.result
+        console.log('DEBUG: Base64 generado - Longitud:', base64Data.length)
+        console.log('DEBUG: Primeros 100 caracteres:', base64Data.substring(0, 100))
+        
+        setImagePreview(base64Data)
         setFormData(prev => ({
           ...prev,
-          foto_principal: e.target.result
+          foto_principal: base64Data
         }))
         setErrors(prev => ({ ...prev, foto_principal: '' }))
       }
@@ -344,6 +350,9 @@ function CrearReceta() {
         })),
         etiquetas: etiquetasSeleccionadas
       }
+
+      console.log('DEBUG: Enviando receta con foto_principal - Longitud:', datosReceta.foto_principal ? datosReceta.foto_principal.length : 0)
+      console.log('DEBUG: Primeros 100 caracteres de foto_principal:', datosReceta.foto_principal ? datosReceta.foto_principal.substring(0, 100) : 'null')
 
       const response = await apiPost('post', datosReceta, token)
       
