@@ -22,6 +22,7 @@ import {
   Check
 } from 'lucide-react'
 import AnimatedContent from '../components/Animations/AnimatedContent'
+import RecipeDetailModal from '../components/RecipeDetailModal'
 import { apiGet, eliminarFavorito } from '../functions/api'
 
 function Favoritos() {
@@ -59,7 +60,7 @@ function Favoritos() {
   }, [user?.id])
 
   const handleRecetaClick = async (receta) => {
-    setSelectedReceta(receta)
+    setSelectedReceta(receta.id)
     setShowModal(true)
   }
 
@@ -607,109 +608,23 @@ function Favoritos() {
       )}
 
       {/* Modal de detalles de receta */}
-      {showModal && selectedReceta && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header del modal */}
-            <div className="relative p-6 border-b border-pavlova-200">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-pavlova-800 mb-2">{selectedReceta.titulo}</h2>
-                  <p className="text-pavlova-600 mb-3">{selectedReceta.descripcion}</p>
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getDificultadColor(selectedReceta.dificultad)}`}>
-                    {selectedReceta.dificultad}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="w-10 h-10 bg-pavlova-100 rounded-full flex items-center justify-center text-pavlova-600 hover:bg-pavlova-200 transition-colors ml-4"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido del modal */}
-            <div className="p-6">
-              {/* Información del autor */}
-              <div className="flex items-center space-x-3 mb-6 p-4 bg-pavlova-50 rounded-lg">
-                <img
-                  src={selectedReceta.foto_perfil || '/images/default-avatar.png'}
-                  alt={selectedReceta.nombre_usuario}
-                  className="w-12 h-12 rounded-full object-cover"
-                  onError={(e) => {
-                    e.target.src = '/images/default-avatar.png'
-                  }}
-                />
-                <div>
-                  <p className="font-semibold text-pavlova-800">@{selectedReceta.nombre_usuario}</p>
-                  <p className="text-sm text-pavlova-600">Autor de la receta</p>
-                </div>
-              </div>
-
-              {/* Etiquetas */}
-              {selectedReceta.etiquetas && selectedReceta.etiquetas.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-pavlova-800 mb-3">Etiquetas</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedReceta.etiquetas.map((etiqueta, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 text-sm rounded-full font-medium"
-                        style={{
-                          backgroundColor: `${etiqueta.color}20`,
-                          color: etiqueta.color
-                        }}
-                      >
-                        {etiqueta.nombre}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Información del favorito */}
-              <div className="bg-pavlova-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center space-x-2">
-                  <Heart className="w-5 h-5 text-red-500 fill-current" />
-                  <span className="font-semibold text-pavlova-800">Marcado como favorito</span>
-                </div>
-                <p className="text-sm text-pavlova-600 mt-1">
-                  Favorito el {formatDate(favoritos.find(f => f.receta.id === selectedReceta.id)?.fecha_favorito)}
-                </p>
-              </div>
-
-              {/* Instrucciones */}
-              {selectedReceta.instrucciones && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-pavlova-800 mb-3">Instrucciones</h3>
-                  <div className="bg-pavlova-50 rounded-lg p-4 border border-pavlova-200">
-                    <div className="prose prose-pavlova max-w-none">
-                      {selectedReceta.instrucciones.split('\n').map((instruccion, index) => {
-                        const trimmedInstruccion = instruccion.trim()
-                        if (!trimmedInstruccion) return null
-                        
-                        return (
-                          <div key={index} className="mb-3 last:mb-0">
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0 w-6 h-6 bg-pavlova-500 text-white rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
-                                {index + 1}
-                              </div>
-                              <p className="text-pavlova-700 leading-relaxed flex-1">
-                                {trimmedInstruccion}
-                              </p>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <RecipeDetailModal
+        recetaId={selectedReceta}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onFavoriteToggle={(recetaId) => {
+          // En favoritos, siempre eliminamos el favorito
+          const favorito = favoritos.find(f => f.receta.id === recetaId)
+          if (favorito) {
+            eliminarFavoritoHandler(favorito.id)
+          }
+        }}
+        favoritos={favoritos.reduce((acc, favorito) => {
+          acc[favorito.receta.id] = favorito.id
+          return acc
+        }, {})}
+        isOwnRecipe={false}
+      />
     </div>
   )
 }

@@ -28,7 +28,6 @@ function Navbar({ isAuthenticated, logout }) {
     <>
       <NavbarDesktop menuItems={menuItems} isActive={isActive} onLogout={logout} />
       <NavbarMobile menuItems={menuItems} isActive={isActive} onLogout={logout} />
-      <div className="lg:hidden h-20" />
     </>
   )
 }

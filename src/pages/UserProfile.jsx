@@ -473,7 +473,7 @@ function UserProfile() {
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center space-x-1">
                               <Clock className="w-3 h-3" />
-                              <span>{formatTime(receta.tiempo_preparacion)}</span>
+                              <span>{formatTime((receta.tiempo_preparacion || 0) + (receta.tiempo_coccion || 0))}</span>
                             </div>
                             
                             <div className="flex items-center space-x-1">

@@ -351,6 +351,101 @@ export async function obtenerRecetasUsuario(nombreUsuario, token) {
   }
 }
 
+// Funciones para comentarios
+export async function crearComentario(recetaId, usuarioId, comentario, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(API_BASE + 'comentario', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        receta_id: recetaId,
+        usuario_id: usuarioId,
+        comentario: comentario
+      })
+    })
+    
+    return handleResponse(res)
+  } catch (error) {
+    throw new Error('Error al crear comentario')
+  }
+}
+
+export async function obtenerComentarios(recetaId, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}comentarios?receta_id=${recetaId}`, { headers })
+    return handleResponse(res)
+  } catch (error) {
+    // Si es un error 563 (no hay comentarios), devolver array vacío
+    if (error.message.includes('563')) {
+      return { data: [] }
+    }
+    throw new Error('Error al obtener comentarios')
+  }
+}
+
+// Funciones para valoraciones
+export async function crearValoracion(recetaId, usuarioId, puntuacion, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(API_BASE + 'valoracion', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        receta_id: recetaId,
+        usuario_id: usuarioId,
+        puntuacion: puntuacion
+      })
+    })
+    
+    return handleResponse(res)
+  } catch (error) {
+    throw new Error('Error al crear valoración')
+  }
+}
+
+export async function obtenerValoraciones(recetaId, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}valoraciones?receta_id=${recetaId}`, { headers })
+    return handleResponse(res)
+  } catch (error) {
+    // Si es un error 564 (no hay valoraciones), devolver array vacío
+    if (error.message.includes('564')) {
+      return { data: [] }
+    }
+    throw new Error('Error al obtener valoraciones')
+  }
+}
+
+export async function editarValoracion(valoracionId, puntuacion, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(API_BASE + `valoracion/${valoracionId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        puntuacion: puntuacion
+      })
+    })
+    
+    return handleResponse(res)
+  } catch (error) {
+    throw new Error('Error al editar valoración')
+  }
+}
+
 
 
 // Exportación por defecto con todas las funciones

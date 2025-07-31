@@ -4,7 +4,7 @@ import { LogOut } from 'lucide-react'
 
 function NavbarDesktop({ menuItems, isActive, onLogout }) {
   return (
-    <nav className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white/90 backdrop-blur-md shadow-xl border-r border-pavlova-200/50 z-50">
+    <nav className="hidden lg:block fixed left-0 top-0 h-full w-64 bg-white/90 backdrop-blur-md shadow-xl border-r border-pavlova-200/50 z-40">
       <div className="flex flex-col h-full">
         {/* Logo en la parte superior */}
         <div className="p-6 border-b border-pavlova-200/30">

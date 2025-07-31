@@ -71,42 +71,42 @@ function AppRoutes() {
         <>
           <Route path="/feed" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <Feed />
               </div>
             </ProtectedRoute>
           } />
           <Route path="/perfil" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <Profile />
               </div>
             </ProtectedRoute>
           } />
           <Route path="/editar-perfil" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <UserProfileEdit />
               </div>
             </ProtectedRoute>
           } />
           <Route path="/crear" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <CrearReceta />
               </div>
             </ProtectedRoute>
           } />
                     <Route path="/favoritos" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <Favoritos />
               </div>
             </ProtectedRoute>
           } />
           <Route path="/perfil/:nombreUsuario" element={
             <ProtectedRoute>
-              <div className="lg:ml-64">
+              <div className="lg:ml-64 pb-20 lg:pb-0">
                 <UserProfile />
               </div>
             </ProtectedRoute>

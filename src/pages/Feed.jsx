@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, añadirFavorito, eliminarFavorito } from '../functions/api'
 import AnimatedContent from '../components/Animations/AnimatedContent'
+import RecipeDetailModal from '../components/RecipeDetailModal'
 import { 
   Heart, 
   Clock, 
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 
 function Feed() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [recetas, setRecetas] = useState([])
   
@@ -31,11 +32,11 @@ function Feed() {
   const [favoritos, setFavoritos] = useState({}) // { recetaId: favoritoId }
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !authLoading) {
       cargarRecetas()
       cargarFavoritosUsuario()
     }
-  }, [user?.id])
+  }, [user?.id, authLoading])
 
   // Recargar favoritos cuando el usuario cambie
   useEffect(() => {
@@ -55,9 +56,27 @@ function Feed() {
       }
       
       const token = localStorage.getItem('token')
-      const response = await apiGet('feed', token)
+      if (!token) {
+        setError('Token no encontrado')
+        return
+      }
+      
+      const response = await apiGet(`feed?usuario_id=${user.id}`, token)
       
       if (response && response.data) {
+        console.log('🔍 Datos de recetas recibidos:', response.data)
+        // Log de la primera receta para ver la estructura
+        if (response.data.length > 0) {
+          const primeraReceta = response.data[0]
+          console.log('🔍 Primera receta:', {
+            id: primeraReceta.id,
+            titulo: primeraReceta.titulo,
+            tiempo_preparacion: primeraReceta.tiempo_preparacion,
+            tiempo_coccion: primeraReceta.tiempo_coccion,
+            total_favoritos: primeraReceta.total_favoritos,
+            promedio_valoraciones: primeraReceta.promedio_valoraciones
+          })
+        }
         setRecetas(response.data)
       }
     } catch (error) {
@@ -114,8 +133,11 @@ function Feed() {
             : receta
         ))
         
-        // Recargar favoritos para asegurar sincronización
-        await cargarFavoritosUsuario()
+        // Recargar favoritos y recetas para asegurar sincronización
+        await Promise.all([
+          cargarFavoritosUsuario(),
+          cargarRecetas()
+        ])
       }
     } catch (error) {
       // Si el error es 400 (Bad Request), probablemente la receta ya está en favoritos
@@ -154,8 +176,11 @@ function Feed() {
             : receta
         ))
         
-        // Recargar favoritos para asegurar sincronización
-        await cargarFavoritosUsuario()
+        // Recargar favoritos y recetas para asegurar sincronización
+        await Promise.all([
+          cargarFavoritosUsuario(),
+          cargarRecetas()
+        ])
       }
     } catch (error) {
       // Si hay error, recargar favoritos para asegurar estado correcto
@@ -200,11 +225,22 @@ function Feed() {
   }
 
   const handleRecetaClick = (receta) => {
-    setSelectedReceta(receta)
+    setSelectedReceta(receta.id)
     setShowModal(true)
   }
 
 
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pavlova-50 via-pavlova-100 to-pavlova-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-pavlova-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-pavlova-600 font-medium">Verificando autenticación...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -387,7 +423,7 @@ function Feed() {
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1 text-gray-500">
                         <Clock className="w-4 h-4" />
-                        <span className="text-sm font-medium">{formatTime(receta.tiempo_preparacion)}</span>
+                        <span className="text-sm font-medium">{formatTime((receta.tiempo_preparacion || 0) + (receta.tiempo_coccion || 0))}</span>
                       </div>
                       
                       <div className="flex items-center space-x-1 text-gray-500">
@@ -445,134 +481,21 @@ function Feed() {
       </div>
 
       {/* Modal de detalles de receta */}
-      {showModal && selectedReceta && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header del modal */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Detalles de la Receta</h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Contenido del modal */}
-            <div className="p-6">
-              {/* Imagen principal */}
-              <div className="relative mb-6">
-                <img
-                  src={selectedReceta.foto_principal || '/images/default-recipe.jpg'}
-                  alt={selectedReceta.titulo}
-                  className="w-full h-64 object-cover rounded-xl"
-                  onError={(e) => {
-                    e.target.src = '/images/default-recipe.jpg'
-                  }}
-                />
-                <div className="absolute top-3 left-3">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    selectedReceta.dificultad === 'Fácil' ? 'bg-green-500 text-white' :
-                    selectedReceta.dificultad === 'Intermedio' ? 'bg-yellow-500 text-white' :
-                    'bg-red-500 text-white'
-                  }`}>
-                    {selectedReceta.dificultad}
-                  </span>
-                </div>
-              </div>
-
-              {/* Información de la receta */}
-              <div className="space-y-6">
-                {/* Botones de acción */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => {
-                        const favoritoId = favoritos[selectedReceta.id]
-                        if (favoritoId) {
-                          eliminarDeFavoritos(selectedReceta.id)
-                        } else {
-                          añadirAFavoritos(selectedReceta.id)
-                        }
-                      }}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      <Heart 
-                        className={`w-6 h-6 ${
-                          favoritos[selectedReceta.id] 
-                            ? 'text-red-500 fill-current' 
-                            : 'text-gray-400 hover:text-red-500'
-                        } transition-colors`} 
-                      />
-                    </button>
-                    
-                    <div className="flex items-center space-x-1 text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm">{formatTime(selectedReceta.tiempo_preparacion)}</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-1 text-gray-500">
-                      <Users className="w-4 h-4" />
-                      <span className="text-sm">{selectedReceta.porciones || 1} porciones</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1 text-gray-500">
-                    <Heart className="w-4 h-4" />
-                    <span className="text-sm">{selectedReceta.total_favoritos || 0}</span>
-                  </div>
-                </div>
-
-                {/* Título y descripción */}
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">{selectedReceta.titulo}</h2>
-                  <p className="text-gray-700 leading-relaxed">{selectedReceta.descripcion}</p>
-                </div>
-
-                {/* Etiquetas */}
-                {selectedReceta.etiquetas && selectedReceta.etiquetas.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedReceta.etiquetas.map((etiqueta, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 text-sm rounded-full font-medium"
-                        style={{
-                          backgroundColor: `${etiqueta.color}20`,
-                          color: etiqueta.color
-                        }}
-                      >
-                        #{etiqueta.nombre.toLowerCase().replace(/\s+/g, '')}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Instrucciones */}
-                {selectedReceta.instrucciones && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Instrucciones</h3>
-                    <div className="space-y-3">
-                      {selectedReceta.instrucciones.split('\n').map((instruccion, index) => (
-                        instruccion.trim() && (
-                          <div key={index} className="flex items-start space-x-3">
-                            <div className="w-6 h-6 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                              {index + 1}
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex-1">
-                              <p className="text-gray-700">{instruccion.trim()}</p>
-                            </div>
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RecipeDetailModal
+        recetaId={selectedReceta}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onFavoriteToggle={(recetaId) => {
+          const favoritoId = favoritos[recetaId]
+          if (favoritoId) {
+            eliminarDeFavoritos(recetaId)
+          } else {
+            añadirAFavoritos(recetaId)
+          }
+        }}
+        favoritos={favoritos}
+        isOwnRecipe={false}
+      />
     </div>
   )
 }
