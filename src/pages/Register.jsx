@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
-import LoginCard from './Login/LoginCard'
-import LoginForm from './Login/LoginForm'
-import LoginDecor from './Login/LoginDecor'
-import AnimatedContent from './Animations/AnimatedContent'
+import RegisterCard from '../components/Register/RegisterCard'
+import RegisterForm from '../components/Register/RegisterForm'
+import RegisterDecor from '../components/Register/RegisterDecor'
+import AnimatedContent from '../components/Animations/AnimatedContent'
 
-function Login() {
+function Register() {
   const [formData, setFormData] = useState({
+    nombre_usuario: '',
+    nombre_completo: '',
     email: '',
     password: ''
   })
@@ -17,29 +19,40 @@ function Login() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   
-  const { login } = useAuth()
+  const { register } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
     try {
-      const response = await login(formData.email, formData.password)
+      const response = await register(
+        formData.nombre_usuario, 
+        formData.nombre_completo, 
+        formData.email, 
+        formData.password
+      )
       setResult(response)
       setError('')
       setShowModal(true)
       
-      // La navegación ahora se maneja en el hook useAuth
+      if (response) {
+        setTimeout(() => {
+          navigate('/feed')
+        }, 2000)
+      }
     } catch (err) {
       setResult(null)
-      setError(err.message || 'Error en el inicio de sesión')
+      setError(err.message || 'Error en el registro')
       setShowModal(true)
     }
   }
 
   const handleModalClose = () => {
     setShowModal(false)
-    // La navegación ahora se maneja en el hook useAuth
+    if (result) {
+      navigate('/feed')
+    }
   }
 
   const renderModalContent = () => {
@@ -70,7 +83,7 @@ function Login() {
             delay={0.2}
           >
             <h2 className="text-xl font-bold text-pavlova-700 mb-2 text-center">
-              ¡Inicio de sesión exitoso!
+              ¡Registro exitoso!
             </h2>
           </AnimatedContent>
           
@@ -83,7 +96,7 @@ function Login() {
             delay={0.4}
           >
             <p className="text-pavlova-600 text-center mb-4">
-              Has iniciado sesión correctamente.<br/>Serás redirigido al feed automáticamente.
+              Tu cuenta ha sido creada correctamente.<br/>Serás redirigido al feed en unos segundos.
             </p>
           </AnimatedContent>
           
@@ -130,7 +143,7 @@ function Login() {
           delay={0.2}
         >
           <h2 className="text-xl font-bold text-red-700 mb-2 text-center">
-            Error en el inicio de sesión
+            Error en el registro
           </h2>
         </AnimatedContent>
         
@@ -163,8 +176,8 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pavlova-100 via-pavlova-200 to-pavlova-300 flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
-      <LoginDecor />
+    <div className="min-h-screen bg-gradient-to-br from-pavlova-50 via-pavlova-100 to-pavlova-200 flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
+      <RegisterDecor />
       
       <AnimatedContent
         distance={200}
@@ -175,9 +188,9 @@ function Login() {
         scale={0.9}
         delay={0.2}
       >
-        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md xl:max-w-xl 2xl:max-w-2xl flex items-center justify-center mx-auto">
-          <LoginCard>
-            <LoginForm
+        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md xl:max-w-xl 2xl:max-w-2xl flex items-center justi1fy-center mx-auto">
+          <RegisterCard>
+            <RegisterForm
               formData={formData}
               setFormData={setFormData}
               showPassword={showPassword}
@@ -197,17 +210,17 @@ function Login() {
             >
               <div className="text-center mt-3 sm:mt-4 lg:mt-4 xl:mt-5 2xl:mt-8 pt-2.5 sm:pt-3 lg:pt-3 xl:pt-4 2xl:pt-6 border-t border-pavlova-200/50">
                 <p className="text-pavlova-600 text-xs sm:text-xs lg:text-xs xl:text-xs 2xl:text-sm">
-                  ¿No tienes cuenta?{' '}
+                  ¿Ya tienes cuenta?{' '}
                   <Link 
-                    to="/register" 
+                    to="/login" 
                     className="text-pavlova-700 font-semibold hover:text-pavlova-900 transition-colors duration-200 hover:underline"
                   >
-                    Regístrate aquí
+                    Inicia sesión aquí
                   </Link>
                 </p>
               </div>
             </AnimatedContent>
-          </LoginCard>
+          </RegisterCard>
         </div>
       </AnimatedContent>
       
@@ -233,4 +246,4 @@ function Login() {
   )
 }
 
-export default Login
+export default Register 

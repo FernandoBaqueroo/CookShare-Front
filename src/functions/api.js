@@ -59,18 +59,18 @@ export async function apiPost(endpoint, data, token) {
 export async function apiPut(endpoint, data, token) {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
-
+  
   console.log(`📤 PUT ${API_BASE}${endpoint}`)
   console.log('📋 Headers:', headers)
   console.log('📄 Data:', data)
   console.log('📄 Data JSON:', JSON.stringify(data))
-
+  
   const res = await fetch(API_BASE + endpoint, {
     method: 'PUT',
     headers,
     body: JSON.stringify(data)
   })
-
+  
   console.log(`📥 Respuesta PUT ${endpoint}:`, res.status, res.statusText)
   return handleResponse(res)
 }
@@ -84,49 +84,6 @@ export async function apiDelete(endpoint, token) {
     headers
   })
   return handleResponse(res)
-}
-
-// Función específica para subir imagen de perfil usando FormData
-export async function uploadProfileImageFormData(imageFile, token) {
-  const formData = new FormData()
-  formData.append('foto_perfil', imageFile)
-  
-  console.log('Enviando imagen usando FormData:', imageFile.name)
-  
-  const headers = {}
-  if (token) headers.Authorization = `Bearer ${token}`
-  // No incluir Content-Type, dejar que el navegador lo establezca automáticamente para FormData
-  
-  // Probar diferentes endpoints
-  const endpoints = [
-    'perfil/imagen',
-    'upload-profile-image',
-    'profile-image',
-    'usuario/imagen',
-    'api/upload-image'
-  ]
-  
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`Probando endpoint FormData: ${endpoint}`)
-      const res = await fetch(API_BASE + endpoint, {
-        method: 'POST',
-        headers,
-        body: formData
-      })
-      
-      console.log(`Respuesta del endpoint ${endpoint}:`, res.status, res.statusText)
-      
-      if (res.ok) {
-        return handleResponse(res)
-      }
-    } catch (error) {
-      console.log(`Error con endpoint ${endpoint}:`, error.message)
-      continue
-    }
-  }
-  
-  throw new Error('No se pudo encontrar un endpoint válido para subir la imagen')
 }
 
 // Función específica para subir imagen de perfil
@@ -174,6 +131,228 @@ export async function uploadProfileImage(imageFile, token, usuario_id) {
   })
 }
 
+// Función específica para subir imagen de perfil usando FormData
+export async function uploadProfileImageFormData(imageFile, token) {
+  const formData = new FormData()
+  formData.append('foto_perfil', imageFile)
+  
+  console.log('Enviando imagen usando FormData:', imageFile.name)
+  
+  const headers = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  // No incluir Content-Type, dejar que el navegador lo establezca automáticamente para FormData
+  
+  // Probar diferentes endpoints
+  const endpoints = [
+    'perfil/imagen',
+    'upload-profile-image',
+    'profile-image',
+    'usuario/imagen',
+    'api/upload-image'
+  ]
+  
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`Probando endpoint FormData: ${endpoint}`)
+      const res = await fetch(API_BASE + endpoint, {
+        method: 'POST',
+        headers,
+        body: formData
+      })
+      
+      console.log(`Respuesta del endpoint ${endpoint}:`, res.status, res.statusText)
+      
+      if (res.ok) {
+        return handleResponse(res)
+      }
+    } catch (error) {
+      console.log(`Error con endpoint ${endpoint}:`, error.message)
+      continue
+    }
+  }
+  
+  throw new Error('No se pudo encontrar un endpoint válido para subir la imagen')
+}
+
+// Funciones específicas para ingredientes
+export async function buscarIngredientes(termino, token) {
+  try {
+    const url = termino 
+      ? `${API_BASE}ingredientes/lista?busqueda=${encodeURIComponent(termino)}`
+      : `${API_BASE}ingredientes/lista`
+    
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(url, { headers })
+    return handleResponse(res)
+  } catch (error) {
+    console.error('Error buscando ingredientes:', error)
+    throw error
+  }
+}
+
+export async function crearIngrediente(nombre, unidadMedida, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}ingredientes/crear`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        nombre: nombre,
+        unidad_medida: unidadMedida
+      })
+    })
+    
+    return handleResponse(res)
+  } catch (error) {
+    console.error('Error creando ingrediente:', error)
+    throw error
+  }
+}
+
+// ===== FUNCIONES DE ELIMINACIÓN Y FAVORITOS =====
+
+/**
+ * Eliminar una receta (marcar como inactiva)
+ * @param {number} recetaId - ID de la receta a eliminar
+ * @param {string} token - Token de autenticación
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function eliminarReceta(recetaId, token) {
+  try {
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}receta/${recetaId}`, {
+      method: 'DELETE',
+      headers
+    })
+    return handleResponse(res)
+  } catch (error) {
+    console.error('Error eliminando receta:', error)
+    throw error
+  }
+}
+
+/**
+ * Añadir una receta a favoritos
+ * @param {number} recetaId - ID de la receta
+ * @param {number} usuarioId - ID del usuario
+ * @param {string} token - Token de autenticación
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function añadirFavorito(recetaId, usuarioId, token) {
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    // Enviar datos en formato más simple
+    const data = {
+      receta_id: recetaId,
+      usuario_id: usuarioId
+    }
+    
+    const res = await fetch(`${API_BASE}favorito`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data)
+    })
+    
+    // Manejar la respuesta directamente aquí para evitar el error de "body stream already read"
+    const contentType = res.headers.get('content-type')
+    
+    if (contentType && contentType.includes('application/json')) {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.message || `Error ${res.status}: ${res.statusText}`)
+      }
+      return await res.json()
+    } else {
+      // Si la respuesta es HTML (error de Laravel), crear un error apropiado
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`)
+      }
+      throw new Error('Respuesta inesperada del servidor')
+    }
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Eliminar una receta de favoritos
+ * @param {number} favoritoId - ID del favorito a eliminar
+ * @param {string} token - Token de autenticación
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function eliminarFavorito(favoritoId, token) {
+  try {
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}favorito/${favoritoId}`, {
+      method: 'DELETE',
+      headers
+    })
+    return handleResponse(res)
+  } catch (error) {
+    throw error
+  }
+}
+
+
+
+
+
+
+
+/**
+ * Obtener perfil público de otro usuario por nombre de usuario
+ * @param {string} nombreUsuario - Nombre de usuario
+ * @param {string} token - Token de autenticación
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function obtenerPerfilUsuario(nombreUsuario, token) {
+  try {
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}usuario/${encodeURIComponent(nombreUsuario)}`, {
+      method: 'GET',
+      headers
+    })
+    return handleResponse(res)
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Obtener recetas de un usuario específico por nombre de usuario
+ * @param {string} nombreUsuario - Nombre de usuario
+ * @param {string} token - Token de autenticación
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function obtenerRecetasUsuario(nombreUsuario, token) {
+  try {
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const res = await fetch(`${API_BASE}usuario/${encodeURIComponent(nombreUsuario)}/recetas`, {
+      method: 'GET',
+      headers
+    })
+    return handleResponse(res)
+  } catch (error) {
+    throw error
+  }
+}
+
+
+
 // Exportación por defecto con todas las funciones
 export default {
   apiGet,
@@ -181,7 +360,14 @@ export default {
   apiPut,
   apiDelete,
   uploadProfileImage,
-  uploadProfileImageFormData
+  uploadProfileImageFormData,
+  buscarIngredientes,
+  crearIngrediente,
+  eliminarReceta,
+  añadirFavorito,
+  eliminarFavorito,
+  obtenerPerfilUsuario,
+  obtenerRecetasUsuario
 }
 
  

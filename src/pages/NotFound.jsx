@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
-import AnimatedContent from './Animations/AnimatedContent'
+import AnimatedContent from '../components/Animations/AnimatedContent'
 
 function NotFound() {
   const { isAuthenticated } = useAuth()

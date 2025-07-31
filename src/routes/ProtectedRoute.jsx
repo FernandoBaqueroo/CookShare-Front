@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
-import AnimatedContent from './Animations/AnimatedContent'
+import AnimatedContent from '../components/Animations/AnimatedContent'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth()

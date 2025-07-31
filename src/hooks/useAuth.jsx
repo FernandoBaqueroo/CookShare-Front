@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data)
       return true
     } catch (error) {
-      console.error('Token inválido:', error)
       localStorage.removeItem('token')
       return false
     }
@@ -125,22 +124,13 @@ export const AuthProvider = ({ children }) => {
   // Función para actualizar los datos del usuario
   const updateUser = async () => {
     try {
-      console.log('🔄 Iniciando actualización de usuario...')
       const token = localStorage.getItem('token')
       if (token) {
-        console.log('🔑 Token encontrado, haciendo petición a /perfil')
         const response = await apiGet('perfil', token)
-        console.log('📥 Respuesta de /perfil:', response)
-        console.log('👤 Datos del usuario antes:', user)
         setUser(response.data)
-        console.log('👤 Datos del usuario después:', response.data)
-        console.log('🖼️ Campo foto_perfil:', response.data.foto_perfil)
-        console.log('✅ Usuario actualizado en el contexto')
-      } else {
-        console.log('❌ No hay token disponible')
       }
     } catch (error) {
-      console.error('❌ Error al actualizar usuario:', error)
+      // Error silencioso
     }
   }
 

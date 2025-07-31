@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { User, Mail, UserCircle, Camera, Lock, Eye, EyeOff, Save, X, Edit3, LogOut, Upload, Trash2, Shield, Settings, Palette, Bell, Globe, AlertTriangle } from 'lucide-react'
-import AnimatedContent from './Animations/AnimatedContent'
+import AnimatedContent from '../components/Animations/AnimatedContent'
 import api from '../functions/api.js'
 const { apiGet, apiPut, uploadProfileImage } = api
 
@@ -67,9 +67,8 @@ function UserProfileEdit() {
       })
       // Usar la URL completa de la imagen para la vista previa
       setImagePreview(userData.foto_perfil || '')
-      console.log('📸 Imagen cargada en UserProfileEdit:', userData.foto_perfil)
+
     } catch (error) {
-      console.error('Error cargando datos del usuario:', error)
       setModalType('error')
       setModalMessage('Error al cargar los datos del perfil')
       setShowModal(true)
@@ -98,6 +97,11 @@ function UserProfileEdit() {
       ...prev,
       [name]: value
     }))
+    
+    // Activar el modo de cambio de contraseña si el usuario empieza a escribir
+    if (value && !isChangingPassword) {
+      setIsChangingPassword(true)
+    }
     
     // Limpiar error del campo
     if (errors[name]) {
@@ -172,6 +176,11 @@ function UserProfileEdit() {
   const handleSaveProfile = async () => {
     if (!validateForm()) return
 
+    // Validar cambio de contraseña si se está cambiando
+    if (isChangingPassword && !validatePasswordChange()) {
+      return
+    }
+
     // Validar que el usuario esté disponible
     if (!user || !user.id) {
       setModalType('error')
@@ -204,37 +213,36 @@ function UserProfileEdit() {
         setIsUploadingImage(true)
         try {
           const response = await uploadProfileImage(selectedImage, token, user.id)
-          console.log('Respuesta de subida de imagen:', response)
+  
           
           // Verificar que la respuesta tenga los datos esperados
           if (response && response.data && response.data.foto_url) {
-            // Extraer solo el nombre del archivo de la URL completa
+            // Construir la URL completa para la vista previa
             const fotoUrl = response.data.foto_url
-            const filename = fotoUrl.split('/').pop() // Obtiene "1.jpg" de "/api/images/profiles/1.jpg"
+            const baseUrl = window.location.origin
+            const fullUrl = baseUrl + fotoUrl
             
-            // NO incluir la imagen en updateData ya que ya se subió por separado
-            // Solo actualizar la vista previa
-            setImagePreview(fotoUrl) // Para la vista previa usar la URL completa
+            // Actualizar la vista previa con la URL completa
+            setImagePreview(fullUrl)
+            
+            // Extraer solo el nombre del archivo para guardar en formData
+            const filename = fotoUrl.split('/').pop() // Obtiene "1.jpg" de "/api/images/profiles/1.jpg"
             setFormData(prev => ({
               ...prev,
               foto_perfil: filename
             }))
-            console.log('Imagen subida con éxito:', fotoUrl)
-            console.log('Nombre del archivo para la BD:', filename)
-            console.log('⚠️ NO se incluirá foto_perfil en la actualización del perfil')
             
             // Actualizar el usuario en el contexto para que se refleje inmediatamente
             await updateUser()
-            console.log('✅ Usuario actualizado en el contexto')
+            
           } else {
-            console.error('Respuesta inesperada del servidor:', response)
+            // Respuesta inesperada del servidor
             setModalType('error')
             setModalMessage('Error: Respuesta inesperada del servidor')
             setShowModal(true)
             return
           }
         } catch (uploadError) {
-          console.error('Error de red al subir la imagen:', uploadError)
           setModalType('error')
           setModalMessage('Error de red al subir la imagen')
           setShowModal(true)
@@ -268,23 +276,10 @@ function UserProfileEdit() {
 
   const sendUpdateRequest = async (updateData, token) => {
     try {
-      console.log('📤 Datos que se envían a /perfil:', updateData)
-      console.log('🔑 Token:', token ? 'Presente' : 'Ausente')
-      
       const result = await apiPut('perfil', updateData, token)
-      
-      console.log('✅ Respuesta de /perfil:', result)
-      
-      // La imagen ya se subió por separado, solo actualizar la vista previa si es necesario
-      console.log('✅ Perfil actualizado sin incluir imagen (ya se subió por separado)')
       
       // Actualizar el usuario en el contexto
       await updateUser()
-      console.log('✅ Usuario actualizado en el contexto después de actualizar perfil')
-      
-      // Verificar qué datos tiene el usuario después de la actualización
-      console.log('🔍 Verificando datos del usuario después de updateUser:', user)
-      console.log('🖼️ Foto del usuario después de updateUser:', user?.foto_perfil)
       
       setModalType('success')
       setModalMessage(result.message || 'Perfil actualizado correctamente')
@@ -303,7 +298,6 @@ function UserProfileEdit() {
         password_confirmar: ''
       })
     } catch (error) {
-      console.error('❌ Error en sendUpdateRequest:', error)
       throw new Error(error.message || 'Error al actualizar el perfil')
     }
   }
@@ -351,7 +345,7 @@ function UserProfileEdit() {
                 <div className="relative group">
                   <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-pavlova-200 shadow-lg">
                     <img
-                      src={imagePreview ? `${imagePreview}?t=${Date.now()}` : '/images/logo/LogoCookie.png'}
+                      src={imagePreview || formData.foto_perfil || '/images/logo/LogoCookie.png'}
                       alt="Foto de perfil"
                       className="w-full h-full object-cover"
                       onError={(e) => {

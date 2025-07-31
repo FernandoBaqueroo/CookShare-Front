@@ -1,10 +1,33 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../hooks/useAuth.jsx'
-import { User, Mail, UserCircle, Camera, Lock, Eye, EyeOff, Save, X, Edit3, LogOut, Heart, Clock, Star, Plus, Calendar, Award, Users, BookOpen, ChefHat } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../hooks/useAuth'
+import { 
+  User, 
+  Mail, 
+  UserCircle, 
+  Camera, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  Save, 
+  X, 
+  Edit3, 
+  LogOut, 
+  Heart, 
+  Clock, 
+  Star, 
+  Plus, 
+  Calendar, 
+  Award, 
+  Users, 
+  BookOpen, 
+  ChefHat, 
+  Trash2, 
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import AnimatedContent from './Animations/AnimatedContent'
-import api from '../functions/api.js'
-const { apiGet } = api
+import AnimatedContent from '../components/Animations/AnimatedContent'
+import { apiGet, eliminarReceta, añadirFavorito, eliminarFavorito } from '../functions/api'
 
 function Profile() {
   const { user, logout } = useAuth()
@@ -15,28 +38,60 @@ function Profile() {
   const [showModal, setShowModal] = useState(false)
   const [imageKey, setImageKey] = useState(0) // Para forzar re-renderizado de imágenes
 
+  // Estados para favoritos y eliminación
+  const [favoritos, setFavoritos] = useState({}) // { recetaId: favoritoId }
+  const [isDeleting, setIsDeleting] = useState({}) // { recetaId: boolean }
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null) // recetaId o null
+
   useEffect(() => {
     const fetchRecetas = async () => {
       try {
         const token = localStorage.getItem('token')
         const response = await apiGet('personal_posts_preview', token)
-        console.log('🔍 Datos recibidos del backend:', response.data)
         setRecetas(response.data)
       } catch (error) {
-        console.error('Error al cargar recetas:', error)
+        // Error silencioso
       } finally {
         setLoading(false)
       }
     }
 
     fetchRecetas()
+    cargarFavoritosUsuario()
   }, [])
+
+  // Recargar favoritos cuando el usuario cambie
+  useEffect(() => {
+    if (user?.id) {
+      cargarFavoritosUsuario()
+    }
+  }, [user?.id])
+
+  // Cargar favoritos del usuario para sincronizar estado
+  const cargarFavoritosUsuario = async () => {
+    if (!user?.id) return
+    
+    try {
+      const token = localStorage.getItem('token')
+      const response = await apiGet(`favoritos?usuario_id=${user.id}`, token)
+      
+      if (response && response.data) {
+        // Crear un objeto con recetaId -> favoritoId
+        const favoritosMap = {}
+        response.data.forEach(favorito => {
+          favoritosMap[favorito.receta_id] = favorito.id
+        })
+        setFavoritos(favoritosMap)
+      }
+    } catch (error) {
+      // Error silencioso para favoritos
+    }
+  }
 
   // Forzar re-renderizado cuando cambie la imagen del usuario
   useEffect(() => {
     if (user?.foto_perfil) {
       setImageKey(prev => prev + 1)
-      console.log('🔄 Forzando re-renderizado de imagen:', user.foto_perfil)
     }
   }, [user?.foto_perfil])
 
@@ -47,7 +102,7 @@ function Profile() {
       setSelectedReceta(response.data)
       setShowModal(true)
     } catch (error) {
-      console.error('Error al cargar detalles de la receta:', error)
+      // Error silencioso
     }
   }
 
@@ -77,6 +132,91 @@ function Profile() {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  // Función para añadir a favoritos
+  const añadirAFavoritos = async (recetaId) => {
+    if (!user) return
+    
+    try {
+      const token = localStorage.getItem('token')
+      const response = await añadirFavorito(recetaId, user.id, token)
+      
+      if (response && response.data) {
+        // Actualizar estado local inmediatamente
+        setFavoritos(prev => ({
+          ...prev,
+          [recetaId]: response.data.favorito_id
+        }))
+        
+        // Actualizar contador de favoritos en la receta
+        setRecetas(prev => prev.map(receta => 
+          receta.id === recetaId 
+            ? { ...receta, total_favoritos: (receta.total_favoritos || 0) + 1 }
+            : receta
+        ))
+        
+        // Recargar favoritos para asegurar sincronización
+        await cargarFavoritosUsuario()
+      }
+    } catch (error) {
+      // Si hay error, recargar favoritos para asegurar estado correcto
+      await cargarFavoritosUsuario()
+    }
+  }
+
+  // Función para eliminar de favoritos
+  const eliminarDeFavoritos = async (recetaId) => {
+    const favoritoId = favoritos[recetaId]
+    if (!favoritoId) return
+    
+    try {
+      const token = localStorage.getItem('token')
+      const response = await eliminarFavorito(favoritoId, token)
+      
+      if (response && response.data) {
+        // Actualizar estado local inmediatamente
+        setFavoritos(prev => {
+          const newFavoritos = { ...prev }
+          delete newFavoritos[recetaId]
+          return newFavoritos
+        })
+        
+        // Actualizar contador de favoritos en la receta
+        setRecetas(prev => prev.map(receta => 
+          receta.id === recetaId 
+            ? { ...receta, total_favoritos: Math.max(0, (receta.total_favoritos || 0) - 1) }
+            : receta
+        ))
+        
+        // Recargar favoritos para asegurar sincronización
+        await cargarFavoritosUsuario()
+      }
+    } catch (error) {
+      // Si hay error, recargar favoritos para asegurar estado correcto
+      await cargarFavoritosUsuario()
+    }
+  }
+
+  // Función para eliminar receta
+  const eliminarRecetaHandler = async (recetaId) => {
+    if (!user) return
+    
+    try {
+      setIsDeleting(prev => ({ ...prev, [recetaId]: true }))
+      const token = localStorage.getItem('token')
+      const response = await eliminarReceta(recetaId, token)
+      
+      if (response && response.data) {
+        // Remover la receta de la lista
+        setRecetas(prev => prev.filter(receta => receta.id !== recetaId))
+        setShowDeleteConfirm(null)
+      }
+    } catch (error) {
+      // Error silencioso
+    } finally {
+      setIsDeleting(prev => ({ ...prev, [recetaId]: false }))
+    }
   }
 
   if (loading) {
@@ -116,7 +256,7 @@ function Profile() {
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden shadow-xl border-4 border-white">
                   <img
                     key={imageKey} // Add key to force re-render
-                    src={user?.foto_perfil ? `${user.foto_perfil}?t=${Date.now()}` : '/images/default-avatar.png'}
+                    src={user?.foto_perfil || '/images/default-avatar.png'}
                     alt="Foto de perfil"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -193,14 +333,14 @@ function Profile() {
               <p className="text-sm sm:text-base text-pavlova-600">Todas las recetas que has creado</p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-              <button 
+              <button
                 className="inline-flex items-center justify-center px-4 py-2 bg-pavlova-500 text-white rounded-lg shadow-md text-sm sm:text-base"
                 onClick={() => navigate('/crear')}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva receta
               </button>
-              <button 
+              <button
                 className="inline-flex items-center justify-center px-4 py-2 bg-pavlova-500 text-white rounded-lg shadow-md text-sm sm:text-base"
                 onClick={() => navigate('/editar-perfil')}
               >
@@ -251,18 +391,19 @@ function Profile() {
                     <img
                       src={receta.foto_principal || '/images/default-recipe.jpg'}
                       alt={receta.titulo}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
                       onError={(e) => {
                         e.target.src = '/images/default-recipe.jpg'
                       }}
+                      loading="lazy"
                     />
                     
                     {/* Overlay con información */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     
                     {/* Badge de dificultad */}
                     {receta.dificultad && (
-                      <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-semibold shadow-lg ${getDificultadColor(receta.dificultad)}`}>
+                      <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm ${getDificultadColor(receta.dificultad)}`}>
                         {receta.dificultad}
                       </div>
                     )}
@@ -275,7 +416,7 @@ function Profile() {
                       <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-pavlova-100 shadow-sm">
                         <img
                           key={imageKey} // Add key to force re-render
-                          src={user?.foto_perfil ? `${user.foto_perfil}?t=${Date.now()}` : '/images/default-avatar.png'}
+                          src={user?.foto_perfil || '/images/default-avatar.png'}
                           alt={user?.nombre_usuario}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -304,11 +445,42 @@ function Profile() {
                           <span className="text-xs sm:text-sm font-medium">{receta.total_favoritos || 0}</span>
                         </div>
                       </div>
-                      <button className="text-gray-400 hover:text-pavlova-600 transition-colors duration-200 p-1 rounded-full hover:bg-pavlova-50">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                        </svg>
-                      </button>
+                      
+                      {/* Botones de acción */}
+                      <div className="absolute top-3 right-3 flex space-x-2">
+                        {/* Botón de favorito */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const favoritoId = favoritos[receta.id]
+                            if (favoritoId) {
+                              eliminarDeFavoritos(receta.id)
+                            } else {
+                              añadirAFavoritos(receta.id)
+                            }
+                          }}
+                          className={`p-2 rounded-full transition-all ${
+                            favoritos[receta.id]
+                              ? 'bg-red-500 text-white hover:bg-red-600'
+                              : 'bg-white/80 text-gray-600 hover:bg-white hover:text-red-500'
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${favoritos[receta.id] ? 'fill-current' : ''}`} />
+                        </button>
+                        
+                        {/* Botón eliminar (solo para el autor) */}
+                        {user && receta.usuario_id === user.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setShowDeleteConfirm(receta.id)
+                            }}
+                            className="p-2 bg-white/80 text-gray-600 hover:bg-red-500 hover:text-white rounded-full transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -403,8 +575,26 @@ function Profile() {
               {selectedReceta.instrucciones && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-pavlova-800 mb-3">Instrucciones</h3>
-                  <div className="prose prose-pavlova max-w-none">
-                    <p className="text-pavlova-700 leading-relaxed">{selectedReceta.instrucciones}</p>
+                  <div className="bg-pavlova-50 rounded-lg p-4 border border-pavlova-200">
+                    <div className="prose prose-pavlova max-w-none">
+                      {selectedReceta.instrucciones.split('\n').map((instruccion, index) => {
+                        const trimmedInstruccion = instruccion.trim()
+                        if (!trimmedInstruccion) return null
+                        
+                        return (
+                          <div key={index} className="mb-3 last:mb-0">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 w-6 h-6 bg-pavlova-500 text-white rounded-full flex items-center justify-center text-sm font-semibold mt-0.5">
+                                {index + 1}
+                              </div>
+                              <p className="text-pavlova-700 leading-relaxed flex-1">
+                                {trimmedInstruccion}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -471,6 +661,53 @@ function Profile() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar receta */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Eliminar receta</h3>
+                <p className="text-sm text-gray-600">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              ¿Estás seguro de que quieres eliminar esta receta? Se marcará como inactiva y ya no será visible para otros usuarios.
+            </p>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => eliminarRecetaHandler(showDeleteConfirm)}
+                disabled={isDeleting[showDeleteConfirm]}
+                className="flex-1 px-4 py-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                {isDeleting[showDeleteConfirm] ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

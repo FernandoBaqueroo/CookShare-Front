@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Search, Heart, MessageCircle, Users, BookOpen, Star } from 'lucide-react'
-import AnimatedContent from './Animations/AnimatedContent'
+import AnimatedContent from '../components/Animations/AnimatedContent'
 
 function HomePage() {
   const features = [
