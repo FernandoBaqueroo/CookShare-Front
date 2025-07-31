@@ -44,17 +44,17 @@ function Profile() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null) // recetaId o null
 
   useEffect(() => {
-    const fetchRecetas = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        const response = await apiGet('personal_posts_preview', token)
-        setRecetas(response.data)
-      } catch (error) {
-        // Error silencioso
-      } finally {
-        setLoading(false)
-      }
+      const fetchRecetas = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await apiGet('personal_posts_preview', token)
+      setRecetas(response.data)
+    } catch (error) {
+      // Error silencioso
+    } finally {
+      setLoading(false)
     }
+  }
 
     fetchRecetas()
     cargarFavoritosUsuario()
@@ -475,11 +475,14 @@ function Profile() {
                               e.stopPropagation()
                               setShowDeleteConfirm(receta.id)
                             }}
-                            className="p-2 bg-white/80 text-gray-600 hover:bg-red-500 hover:text-white rounded-full transition-all"
+                            className="p-2 bg-white/80 text-gray-600 hover:bg-red-500 hover:text-white rounded-full transition-all shadow-lg"
+                            title="Eliminar receta"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         )}
+                        
+
                       </div>
                     </div>
                   </div>
